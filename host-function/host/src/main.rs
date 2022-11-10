@@ -43,8 +43,7 @@ fn main() -> Result<(), anyhow::Error> {
         .with_host_registration_config(HostRegistrationConfigOptions::default().wasi(true))
         .build()?;
 
-    let vm = Vm::new(Some(config))
-        .expect("fail to create vm")
+    let vm = Vm::new(Some(config))?
         .register_import_module(import)?
         .register_module_from_file("app", "target/wasm32-wasi/release/app.wasm")?;
 
