@@ -33,16 +33,34 @@ fn real_add(_caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, H
     Ok(vec![WasmValue::from_i32(c)])
 }
 
-fn main() -> Result<(), anyhow::Error> {
-    // create import module
-    let import = ImportObjectBuilder::new()
-        .with_func::<(i32, i32), i32, !>("real_add", real_add, None)?
-        .build("env")?;
+#[host_function]
+fn real_println(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
+    println!("Rust: Entering Rust function real_println");
+    if input.len() != 2 {
+        return Err(HostFuncError::User(1));
+    }
 
+    let addr = input[0].to_i32();
+    let size = input[1].to_i32();
+    let m = caller.memory(0).unwrap();
+    println!(
+        "Rust: get string: {}",
+        String::from_utf8_lossy(&m.read(addr as u32, size as u32).expect("test"))
+    );
+
+    println!("Rust: Leaving Rust function real_println");
+    Ok(vec![])
+}
+
+fn main() -> Result<(), anyhow::Error> {
     let config = ConfigBuilder::new(CommonConfigOptions::default())
         .with_host_registration_config(HostRegistrationConfigOptions::default().wasi(true))
         .build()?;
 
+    let import = ImportObjectBuilder::new()
+        .with_func::<(i32, i32), i32, !>("real_add", real_add, None)?
+        .with_func::<(i32, i32), (), !>("real_println", real_println, None)?
+        .build("env")?;
     let vm = Vm::new(Some(config))?
         .register_import_module(import)?
         .register_module_from_file("app", "target/wasm32-wasi/release/app.wasm")?;
