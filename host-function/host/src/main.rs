@@ -46,7 +46,7 @@ pub fn host_println(
 
 #[host_function]
 fn host_suffix(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
-    println!("Rust: Entering Rust function host_suffix");
+    println!("Rust: Entering `host_suffix`");
     if input.len() != 2 {
         return Err(HostFuncError::User(1));
     }
@@ -54,7 +54,7 @@ fn host_suffix(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>,
     let addr = input[0].to_i32() as u32;
     let size = input[1].to_i32() as u32;
     let mut s = load_string(caller, addr, size);
-    println!("Rust: get string: {}", s);
+    println!("Rust: Get: {}", s);
 
     // add suffix
     s.push_str("_suffix");
@@ -68,7 +68,7 @@ fn host_suffix(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>,
     mem.write(s.as_bytes(), final_addr)
         .expect("fail to write returned string");
 
-    println!("Rust: Leaving Rust function host_suffix");
+    println!("Rust: Leaving `host_suffix`");
     Ok(vec![
         WasmValue::from_i32(final_addr as i32),
         WasmValue::from_i32(s.len() as i32),
