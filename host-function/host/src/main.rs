@@ -1,5 +1,6 @@
 #![feature(never_type)]
-
+mod host;
+use host::load_string;
 use wasmedge_sdk::{
     config::{CommonConfigOptions, ConfigBuilder, HostRegistrationConfigOptions},
     error::HostFuncError,
@@ -7,9 +8,7 @@ use wasmedge_sdk::{
 };
 
 #[host_function]
-fn real_add(_caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
-    println!("Rust: Entering Rust function real_add");
-
+fn host_add(_caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
     if input.len() != 2 {
         return Err(HostFuncError::User(1));
     }
@@ -27,29 +26,53 @@ fn real_add(_caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, H
     };
 
     let c = a + b;
-    println!("Rust: calcuating in real_add c: {:?}", c);
+    println!("Rust: calcuating in `host_add` c: {:?}", c);
 
-    println!("Rust: Leaving Rust function real_add");
     Ok(vec![WasmValue::from_i32(c)])
 }
 
 #[host_function]
-fn real_println(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
-    println!("Rust: Entering Rust function real_println");
+pub fn host_println(
+    caller: &Caller,
+    input: Vec<WasmValue>,
+) -> Result<Vec<WasmValue>, HostFuncError> {
+    let addr = input[0].to_i32() as u32;
+    let size = input[1].to_i32() as u32;
+    let s = load_string(caller, addr, size);
+    println!("Rust: `host_println` is printing: \"{}\"", s);
+
+    Ok(vec![])
+}
+
+#[host_function]
+fn host_suffix(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
+    println!("Rust: Entering Rust function host_suffix");
     if input.len() != 2 {
         return Err(HostFuncError::User(1));
     }
 
-    let addr = input[0].to_i32();
-    let size = input[1].to_i32();
-    let m = caller.memory(0).unwrap();
-    println!(
-        "Rust: get string: {}",
-        String::from_utf8_lossy(&m.read(addr as u32, size as u32).expect("test"))
-    );
+    let addr = input[0].to_i32() as u32;
+    let size = input[1].to_i32() as u32;
+    let mut s = load_string(caller, addr, size);
+    println!("Rust: get string: {}", s);
 
-    println!("Rust: Leaving Rust function real_println");
-    Ok(vec![])
+    // add suffix
+    s.push_str("_suffix");
+
+    let mut mem = caller.memory(0).unwrap();
+    // take last address+1
+    let final_addr = mem.size() + 1;
+    // grow a page size
+    mem.grow(1).expect("fail to grow memory");
+    // put the returned string into new address
+    mem.write(s.as_bytes(), final_addr)
+        .expect("fail to write returned string");
+
+    println!("Rust: Leaving Rust function host_suffix");
+    Ok(vec![
+        WasmValue::from_i32(final_addr as i32),
+        WasmValue::from_i32(s.len() as i32),
+    ])
 }
 
 fn main() -> Result<(), anyhow::Error> {
@@ -58,9 +81,10 @@ fn main() -> Result<(), anyhow::Error> {
         .build()?;
 
     let import = ImportObjectBuilder::new()
-        .with_func::<(i32, i32), i32, !>("real_add", real_add, None)?
-        .with_func::<(i32, i32), (), !>("real_println", real_println, None)?
-        .build("env")?;
+        .with_func::<(i32, i32), i32, !>("host_add", host_add, None)?
+        .with_func::<(i32, i32), (), !>("host_println", host_println, None)?
+        .with_func::<(i32, i32), (i32, i32), !>("host_suffix", host_suffix, None)?
+        .build("host")?;
     let vm = Vm::new(Some(config))?
         .register_import_module(import)?
         .register_module_from_file("app", "target/wasm32-wasi/release/app.wasm")?;
