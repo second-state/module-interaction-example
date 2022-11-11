@@ -32,10 +32,7 @@ fn host_add(_caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, H
 }
 
 #[host_function]
-pub fn host_println(
-    caller: &Caller,
-    input: Vec<WasmValue>,
-) -> Result<Vec<WasmValue>, HostFuncError> {
+fn host_println(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
     let addr = input[0].to_i32() as u32;
     let size = input[1].to_i32() as u32;
     let s = load_string(caller, addr, size);
