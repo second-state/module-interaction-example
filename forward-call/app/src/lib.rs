@@ -7,11 +7,11 @@ extern "wasm" {
         module_name_len: usize,
         funciton_name: *const u8,
         funciton_name_len: usize,
-    ) -> ();
+    ) -> u32;
 }
 
 #[no_mangle]
 pub fn start() -> u32 {
-    unsafe { forward_call("lib".as_ptr(), "lib".len(), "foo".as_ptr(), "foo".len()) };
-    0
+    let v = unsafe { forward_call("lib".as_ptr(), "lib".len(), "foo".as_ptr(), "foo".len()) };
+    v
 }
