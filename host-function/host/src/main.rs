@@ -8,7 +8,7 @@ use wasmedge_sdk::{
 };
 
 #[host_function]
-fn host_add(_caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
+fn host_add(_caller: Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
     if input.len() != 2 {
         return Err(HostFuncError::User(1));
     }
@@ -32,17 +32,17 @@ fn host_add(_caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, H
 }
 
 #[host_function]
-fn host_println(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
+fn host_println(caller: Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
     let addr = input[0].to_i32() as u32;
     let size = input[1].to_i32() as u32;
-    let s = load_string(caller, addr, size);
+    let s = load_string(&caller, addr, size);
     println!("Rust: `host_println` is printing: \"{}\"", s);
 
     Ok(vec![])
 }
 
 #[host_function]
-fn host_suffix(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
+fn host_suffix(caller: Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>, HostFuncError> {
     println!("Rust: Entering `host_suffix`");
     if input.len() != 2 {
         return Err(HostFuncError::User(1));
@@ -50,7 +50,7 @@ fn host_suffix(caller: &Caller, input: Vec<WasmValue>) -> Result<Vec<WasmValue>,
 
     let addr = input[0].to_i32() as u32;
     let size = input[1].to_i32() as u32;
-    let mut s = load_string(caller, addr, size);
+    let mut s = load_string(&caller, addr, size);
     println!("Rust: Get: {}", s);
 
     // add suffix
