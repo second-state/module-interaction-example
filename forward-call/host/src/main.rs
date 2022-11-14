@@ -14,7 +14,7 @@ fn main() -> Result<(), anyhow::Error> {
         .build()?;
 
     let mut vm = Vm::new(Some(config))?;
-    let invm = Box::new(vm.clone());
+    let invm = vm.clone();
 
     let import = ImportObjectBuilder::new()
         .with_func::<(i32, i32, i32, i32), i32, !>(
@@ -35,7 +35,7 @@ fn main() -> Result<(), anyhow::Error> {
                     load_string(&caller, input[2].to_i32() as u32, input[3].to_i32() as u32);
                 println!("Rust: function name is: `{}`", fn_name);
 
-                let target_mod = invm.to_owned().named_module(mod_name).unwrap();
+                let target_mod = invm.named_module(mod_name).unwrap();
                 let target_fn = target_mod.func(fn_name).unwrap();
 
                 let mut executor: wasmedge_sdk::Executor = caller.executor_mut().unwrap().into();
