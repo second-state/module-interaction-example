@@ -1,6 +1,8 @@
 #![feature(never_type)]
 mod host;
+mod host_function;
 use host::load_string;
+use host_function::println::host_println;
 use std::ffi::c_void;
 use wasmedge_sdk::{
     config::{CommonConfigOptions, ConfigBuilder, HostRegistrationConfigOptions},
@@ -17,6 +19,7 @@ fn main() -> Result<(), anyhow::Error> {
     let invm = vm.clone();
 
     let import = ImportObjectBuilder::new()
+        .with_func::<(i32, i32), (), !>("host_println", host_println, None)?
         .with_func::<(i32, i32, i32, i32), i32, !>(
             "forward_call",
             move |caller: CallingFrame,
