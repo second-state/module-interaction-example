@@ -7,11 +7,23 @@ extern "wasm" {
         module_name_len: usize,
         funciton_name: *const u8,
         funciton_name_len: usize,
-    ) -> u32;
+        arg: *const u8,
+        arg_len: usize,
+    ) -> (*const u8, usize);
+    fn host_println(ptr: *const u8, size: usize);
 }
 
 #[no_mangle]
-pub fn start() -> u32 {
-    let v = unsafe { forward_call("lib".as_ptr(), "lib".len(), "foo".as_ptr(), "foo".len()) };
-    v
+pub unsafe fn start() -> u32 {
+    let json = "{}";
+    let (ptr, size) = forward_call(
+        "lib".as_ptr(),
+        "lib".len(),
+        "foo".as_ptr(),
+        "foo".len(),
+        json.as_ptr(),
+        json.len(),
+    );
+    host_println(ptr, size);
+    size as u32
 }
