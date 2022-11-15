@@ -30,6 +30,8 @@ fn main() -> Result<(), anyhow::Error> {
                     return Err(HostFuncError::User(1));
                 }
 
+                let mut mem = caller.memory_mut(0).unwrap();
+
                 let mod_name =
                     load_string(&caller, input[0].to_i32() as u32, input[1].to_i32() as u32);
                 let fn_name =
@@ -37,25 +39,34 @@ fn main() -> Result<(), anyhow::Error> {
                 println!("forward_call: `{}:{}`", mod_name, fn_name);
 
                 let target_mod = invm.named_module(mod_name).unwrap();
+                let mut target_mem = target_mod.memory("memory").unwrap();
+
+                let final_addr = target_mem.size() + 1;
+                target_mem.grow(1).unwrap();
+                let str = mem
+                    .get_data(input[4].to_i32() as u32, input[5].to_i32() as u32)
+                    .unwrap();
+                target_mem.write(str, final_addr).unwrap();
+
                 let target_fn = target_mod.func(fn_name).unwrap();
                 let mut executor: wasmedge_sdk::Executor = caller.executor_mut().unwrap().into();
                 let result = target_fn
-                    .call(&mut executor, vec![input[4], input[5]])
-                    .expect("call fail");
+                    .call(
+                        &mut executor,
+                        vec![WasmValue::from_i32(final_addr as i32), input[5]],
+                    )
+                    .unwrap();
 
-                let target_mem = target_mod.memory("memory").unwrap();
                 let str = target_mem
                     .read_string(result[0].to_i32() as u32, result[1].to_i32() as u32)
-                    .expect("fail to read from target");
+                    .unwrap();
 
-                let mut mem = caller.memory_mut(0).unwrap();
                 // take last address+1
                 let final_addr = mem.size() + 1;
                 // grow a page size
-                mem.grow(1).expect("fail to grow caller memory");
+                mem.grow(1).unwrap();
                 // put the returned string into new address
-                mem.set_data(str.as_bytes(), final_addr)
-                    .expect("fail to write back");
+                mem.set_data(str.as_bytes(), final_addr).unwrap();
 
                 Ok(vec![WasmValue::from_i32(final_addr as i32), result[1]])
             },
