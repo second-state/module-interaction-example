@@ -10,17 +10,12 @@ use wasmedge_sdk::{
     CallingFrame, ImportObjectBuilder, Vm, WasmValue,
 };
 
-fn main() -> Result<(), anyhow::Error> {
-    let config = ConfigBuilder::new(CommonConfigOptions::default())
-        .with_host_registration_config(HostRegistrationConfigOptions::default().wasi(true))
-        .build()?;
-
-    let mut vm = Vm::new(Some(config))?;
-    let invm = vm.clone();
-
-    let import = ImportObjectBuilder::new()
-        .with_func::<(i32, i32), (), !>("host_println", host_println, None)?
-        .with_func::<(i32, i32, i32, i32, i32, i32), (i32, i32), !>(
+fn extend_forward_call(
+    io: ImportObjectBuilder,
+    vm: Vm,
+) -> Result<ImportObjectBuilder, anyhow::Error> {
+    Ok(
+        io.with_func::<(i32, i32, i32, i32, i32, i32), (i32, i32), !>(
             "forward_call",
             move |caller: CallingFrame,
                   input: Vec<WasmValue>,
@@ -38,7 +33,7 @@ fn main() -> Result<(), anyhow::Error> {
                     load_string(&caller, input[2].to_i32() as u32, input[3].to_i32() as u32);
                 println!("forward_call: `{}:{}`", mod_name, fn_name);
 
-                let target_mod = invm.named_module(mod_name).unwrap();
+                let target_mod = vm.named_module(mod_name).unwrap();
                 let mut target_mem = target_mod.memory("memory").unwrap();
 
                 let final_addr = target_mem.size() + 1;
@@ -71,7 +66,19 @@ fn main() -> Result<(), anyhow::Error> {
                 Ok(vec![WasmValue::from_i32(final_addr as i32), result[1]])
             },
             None,
-        )?
+        )?,
+    )
+}
+
+fn main() -> Result<(), anyhow::Error> {
+    let config = ConfigBuilder::new(CommonConfigOptions::default())
+        .with_host_registration_config(HostRegistrationConfigOptions::default().wasi(true))
+        .build()?;
+
+    let mut vm = Vm::new(Some(config))?;
+
+    let import = extend_forward_call(ImportObjectBuilder::new(), vm.clone())?
+        .with_func::<(i32, i32), (), !>("host_println", host_println, None)?
         .build("host")?;
 
     vm = vm
