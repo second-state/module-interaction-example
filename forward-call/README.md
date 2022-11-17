@@ -53,7 +53,17 @@ The above code is able to wrap with a macro `forward_call`, then caller part wou
 ```rust
 #[forward_call(module = "lib")]
 extern "wasm" {
-    fn growup(str: String) -> String;
+    fn growup(p: Person) -> Person;
+}
+```
+
+The callee part can be
+
+```rust
+#[forward_call(export)]
+pub fn growup(person: Person) -> Person {
+    person.age += 3;
+    person
 }
 ```
 
