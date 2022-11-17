@@ -1,14 +1,8 @@
 #![feature(wasm_abi)]
 
 mod host;
+use common::Person;
 use host::HostString;
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize)]
-struct Person {
-    name: String,
-    age: u8,
-}
 
 #[link(wasm_import_module = "host")]
 extern "wasm" {
