@@ -7,7 +7,7 @@ use std::ffi::c_void;
 use wasmedge_sdk::{
     config::{CommonConfigOptions, ConfigBuilder, HostRegistrationConfigOptions},
     error::HostFuncError,
-    CallingFrame, ImportObjectBuilder, Vm, WasmValue,
+    Caller, CallingFrame, ImportObjectBuilder, Vm, WasmValue,
 };
 
 fn extend_forward_call(
@@ -17,7 +17,7 @@ fn extend_forward_call(
     Ok(
         io.with_func::<(i32, i32, i32, i32, i32, i32), (i32, i32), !>(
             "forward_call",
-            move |caller: CallingFrame,
+            move |frame: CallingFrame,
                   input: Vec<WasmValue>,
                   _: *mut c_void|
                   -> Result<Vec<WasmValue>, HostFuncError> {
@@ -25,12 +25,12 @@ fn extend_forward_call(
                     return Err(HostFuncError::User(1));
                 }
 
-                let mut mem = caller.memory_mut(0).unwrap();
+                let mut mem = frame.memory_mut(0).unwrap();
 
                 let mod_name =
-                    load_string(&caller, input[0].to_i32() as u32, input[1].to_i32() as u32);
+                    load_string(&frame, input[0].to_i32() as u32, input[1].to_i32() as u32);
                 let fn_name =
-                    load_string(&caller, input[2].to_i32() as u32, input[3].to_i32() as u32);
+                    load_string(&frame, input[2].to_i32() as u32, input[3].to_i32() as u32);
                 println!("forward_call: `{}:{}`", mod_name, fn_name);
 
                 let target_mod = vm.named_module(mod_name).unwrap();
@@ -44,7 +44,7 @@ fn extend_forward_call(
                 target_mem.write(str, final_addr).unwrap();
 
                 let target_fn = target_mod.func(fn_name).unwrap();
-                let mut executor: wasmedge_sdk::Executor = caller.executor_mut().unwrap().into();
+                let mut executor = Caller::new(frame).executor().unwrap();
                 let result = target_fn
                     .call(
                         &mut executor,
