@@ -1,10 +1,9 @@
 [package]
-name = "host"
+name = "host-wasmedge"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 wit-bindgen-wasmtime = { git = "https://github.com/bytecodealliance/wit-bindgen", tag = "v0.2.0" }
-wasmtime = "0.39.1"
-wasmtime-wasi = "0.39.1"
-wasi-common = "0.39.1"
+wasmedge-sdk = "0.5.0"
+anyhow = "*"
