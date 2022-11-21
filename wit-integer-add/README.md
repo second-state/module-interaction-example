@@ -14,3 +14,13 @@ git clone https://github.com/second-state/module-interaction-example.git
 cd module-interaction-example/wit-integer-add
 cargo run --release
 ```
+
+## Use `wasmedge`
+
+Since the module genertaed by `wit-bindgen` only uses core wasm type,
+we could run it using `wasmedge` runtime:
+
+```
+$ wasmedge target/wasm32-wasi/release/lib.wasm add 1 2
+3
+```
