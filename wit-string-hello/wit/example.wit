@@ -1,0 +1,6 @@
+record person {
+  first-name: string,
+  last-name: string,
+}
+
+hello: func(p: person) -> string
