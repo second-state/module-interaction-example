@@ -1,0 +1,8 @@
+[package]
+name = "wasmedge"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "*"
+wasmedge-sdk = "0.6.0"
