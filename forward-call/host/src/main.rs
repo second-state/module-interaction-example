@@ -1,14 +1,25 @@
 #![feature(never_type)]
 mod host;
-mod host_function;
 use host::load_string;
-use host_function::println::host_println;
 use std::ffi::c_void;
 use wasmedge_sdk::{
     config::{CommonConfigOptions, ConfigBuilder, HostRegistrationConfigOptions},
     error::HostFuncError,
-    Caller, CallingFrame, ImportObjectBuilder, Vm, WasmValue,
+    host_function, Caller, CallingFrame, ImportObjectBuilder, Vm, WasmValue,
 };
+
+#[host_function]
+pub fn host_println(
+    caller: Caller,
+    input: Vec<WasmValue>,
+) -> Result<Vec<WasmValue>, HostFuncError> {
+    let addr = input[0].to_i32() as u32;
+    let size = input[1].to_i32() as u32;
+    let s = load_string(&caller, addr, size);
+    println!("Rust: `host_println` is printing: \"{}\"", s);
+
+    Ok(vec![])
+}
 
 fn extend_forward_call(
     io: ImportObjectBuilder,
@@ -21,16 +32,18 @@ fn extend_forward_call(
                   input: Vec<WasmValue>,
                   _: *mut c_void|
                   -> Result<Vec<WasmValue>, HostFuncError> {
+                let caller = Caller::new(frame);
+
                 if input.len() != 6 {
                     return Err(HostFuncError::User(1));
                 }
 
-                let mut mem = frame.memory_mut(0).unwrap();
+                let mut mem = caller.memory(0).unwrap();
 
                 let mod_name =
-                    load_string(&frame, input[0].to_i32() as u32, input[1].to_i32() as u32);
+                    load_string(&caller, input[0].to_i32() as u32, input[1].to_i32() as u32);
                 let fn_name =
-                    load_string(&frame, input[2].to_i32() as u32, input[3].to_i32() as u32);
+                    load_string(&caller, input[2].to_i32() as u32, input[3].to_i32() as u32);
                 println!("forward_call: `{}:{}`", mod_name, fn_name);
 
                 let target_mod = vm.named_module(mod_name).unwrap();
@@ -39,12 +52,12 @@ fn extend_forward_call(
                 let final_addr = target_mem.size() + 1;
                 target_mem.grow(1).unwrap();
                 let str = mem
-                    .get_data(input[4].to_i32() as u32, input[5].to_i32() as u32)
+                    .read(input[4].to_i32() as u32, input[5].to_i32() as u32)
                     .unwrap();
                 target_mem.write(str, final_addr).unwrap();
 
                 let target_fn = target_mod.func(fn_name).unwrap();
-                let mut executor = Caller::new(frame).executor().unwrap();
+                let mut executor = caller.executor().unwrap();
                 let result = target_fn
                     .call(
                         &mut executor,
@@ -61,7 +74,7 @@ fn extend_forward_call(
                 // grow a page size
                 mem.grow(1).unwrap();
                 // put the returned string into new address
-                mem.set_data(str.as_bytes(), final_addr).unwrap();
+                mem.write(str.as_bytes(), final_addr).unwrap();
 
                 Ok(vec![WasmValue::from_i32(final_addr as i32), result[1]])
             },
