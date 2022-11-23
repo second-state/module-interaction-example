@@ -3,7 +3,6 @@
 The structure of this project is
 
 ```
-forward-call/     host-function/    integer-add/      slight-wasmedge/  wit-integer-add/  wit-string-hello/
 .
 ├── forward-call
 ├── host-function
